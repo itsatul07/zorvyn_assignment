@@ -15,8 +15,7 @@ const transactionSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      required: true,
-      trim: true,
+      enum: ["food", "rent", "salary", "shopping", "travel", "other"],
     },
 
     date: {
@@ -38,7 +37,14 @@ const transactionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export default mongoose.model("Transaction", transactionSchema);
+// Indexes
+transactionSchema.index({ date: -1 });
+transactionSchema.index({ category: 1 });
+transactionSchema.index({ type: 1 });
+transactionSchema.index({ createdBy: 1 });
+
+const Transaction = mongoose.model("Transaction", transactionSchema);
+export default Transaction;
