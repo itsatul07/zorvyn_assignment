@@ -2,7 +2,6 @@ import jwt from "jsonwebtoken";
 export const isAuthenticated = (req, res, next) => {
   // 1. Get token from cookie
   const token = req.cookies.token;
-  //console.log("Token from cookie:", token); // Debugging line
 
   if (!token) return res.status(401).json({ message: "Not logged in" });
 
@@ -17,7 +16,7 @@ export const isAuthenticated = (req, res, next) => {
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({ message: "Access denied you need to be an admin or analyst" });
     }
     next();
   };

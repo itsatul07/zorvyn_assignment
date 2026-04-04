@@ -1,5 +1,6 @@
 import Transaction from "../models/TransactionModel.js";
 
+//crud operations for transactions
 export const createTransaction = async (req, res) => {
   try {
     const { amount, type, category, date, note } = req.body;
@@ -23,7 +24,7 @@ export const createTransaction = async (req, res) => {
       category,
       date,
       note,
-      createdBy: req.user.id, // 🔥 who created it
+      createdBy: req.user.id,
     });
 
     res.status(201).json({
@@ -37,17 +38,33 @@ export const createTransaction = async (req, res) => {
   }
 };
 
+export const getTransactionById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const transaction = await Transaction.findById(id).populate(
+      "createdBy",
+      "name email"
+    );
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    } else {
+      res.json(transaction);
+    }     
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const updateTransaction = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log("transaction id from params:", id); // Debugging line
     const transaction = await Transaction.findById(id);
 
     if (!transaction) {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    // 🔐 Role check
+    // Role check
     if (
       req.user.role !== "admin" &&
       transaction.createdBy.toString() !== req.user.id.toString()
@@ -73,7 +90,6 @@ export const updateTransaction = async (req, res) => {
       transaction: updatedTransaction,
     });
   } catch (error) {
-    console.log("Error in updateTransaction:", error); // Debugging line
     res.status(500).json({ message: error.message });
   }
 };
@@ -88,7 +104,7 @@ export const deleteTransaction = async (req, res) => {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    // 🔐 Role check
+    //  Role check
     if (
       req.user.role !== "admin" &&
       transaction.createdBy.toString() !== req.user.id.toString()
@@ -108,25 +124,31 @@ export const deleteTransaction = async (req, res) => {
   }
 };
 
+//get all transactions of a specific user(applicable for admin,analyst) of any user by passing user id as a parameter in the url
 export const getTransactionsByUser = async (req, res) => {
-    const { userId } = req.params;
-
+    const  userId = req.params.userId;
     const transactions = await Transaction.find({ createdBy: userId })
     .sort({ createdAt: -1 });
-
     res.json(transactions);
 };
 
+//get all transactions with optional filters and sorting based on query parameters and paginated results
+
 export const getTransactions = async (req, res) => {
   try {
-    const { type, category, sortBy } = req.query;
+    const { type, category, sortBy, page = 1, limit = 10 } = req.query;
 
     let filter = {};
 
     if (type) filter.type = type;
     if (category) filter.category = category;
 
-    let query = Transaction.find(filter).populate("createdBy", "name email");
+    const skip = (page - 1) * limit;
+
+    let query = Transaction.find(filter)
+      .populate("createdBy", "name email")
+      .skip(skip)
+      .limit(Number(limit));
 
     // Sorting
     if (sortBy === "date") {
@@ -137,63 +159,15 @@ export const getTransactions = async (req, res) => {
 
     const transactions = await query;
 
-    res.json(transactions);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+    const total = await Transaction.countDocuments(filter);
 
+    res.json({
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit),
+      transactions,
+    });
 
-export const getCategoryStats = async (req, res) => {
-  try {
-    const data = await Transaction.aggregate([
-      {
-        $group: {
-          _id: "$category",
-          total: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getMonthlyTrends = async (req, res) => {
-  try {
-    const data = await Transaction.aggregate([
-      {
-        $group: {
-          _id: {
-            year: { $year: "$date" },
-            month: { $month: "$date" },
-          },
-          total: { $sum: "$amount" },
-        },
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } },
-    ]);
-
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getWeeklyTrends = async (req, res) => {
-  try {
-    const data = await Transaction.aggregate([
-      {
-        $group: {
-          _id: { $week: "$date" },
-          total: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    res.json(data);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -2,6 +2,9 @@ import express from "express";
 import User from "../models/UserModels.js";
 import jwt from "jsonwebtoken";
 
+
+//user registration and login/logout
+
 export const registerUser = async (req, res) => {
   const { name, email, password, role } = req.body;
   if (!name || !email || !password) {

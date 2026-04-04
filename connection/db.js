@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-
+// Database connection function
 export async function connectDB(uri) {
   try {
     await mongoose.connect(uri);
